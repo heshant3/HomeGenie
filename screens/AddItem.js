@@ -1,15 +1,22 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, TextInput, Button } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
-import { getDatabase, ref, set, get } from "firebase/database";
+import { getDatabase, ref, set, get, update } from "firebase/database";
 
 export default function AddItem() {
-  const [selectedItem, setSelectedItem] = useState("Fan");
-  const [itemId, setItemId] = useState("");
-  const navigation = useNavigation();
+  const [selectedItem, setSelectedItem] = useState("Light");
+  const [loading, setLoading] = useState(false);
 
   const handleAddItem = () => {
+    setLoading(true);
     const db = getDatabase();
     const deviceRef = ref(db, "device");
     get(deviceRef)
@@ -18,19 +25,23 @@ export default function AddItem() {
         const itemCount = Object.keys(data).filter((key) =>
           key.startsWith(selectedItem)
         ).length;
-        const newItemId = `${selectedItem} ${itemCount + 1}`;
-        const newItem = { type: newItemId, id: itemId };
-        set(ref(db, "device/" + newItem.type), 0)
+        const newItemId = `${selectedItem}${itemCount + 1}`; // Removed space
+        const updates = {};
+        updates[`device/${newItemId}`] = 0;
+        updates[`Choose/${newItemId}`] = 0;
+        update(ref(db), updates)
           .then(() => {
-            console.log("New item added to database");
-            navigation.navigate("HomeTabs", { newItem });
+            setLoading(false);
+            Alert.alert("Success", `New item added: ${newItemId}`);
           })
           .catch((error) => {
-            console.error("Error adding new item to database:", error);
+            setLoading(false);
+            Alert.alert("Error adding new item to database:", error);
           });
       })
       .catch((error) => {
-        console.error("Error fetching device data:", error);
+        setLoading(false);
+        Alert.alert("Error fetching device data:", error);
       });
   };
 
@@ -44,15 +55,14 @@ export default function AddItem() {
         onValueChange={(itemValue) => setSelectedItem(itemValue)}
       >
         <Picker.Item label="Light" value="Light" />
+        <Picker.Item label="Door" value="Door" />
+        <Picker.Item label="Fan" value="Fan" />
       </Picker>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter item ID"
-        keyboardType="numeric"
-        value={itemId}
-        onChangeText={setItemId}
-      />
-      <Button title="Add Item" onPress={handleAddItem} />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <Button title="Add Item" onPress={handleAddItem} disabled={loading} />
+      )}
     </View>
   );
 }

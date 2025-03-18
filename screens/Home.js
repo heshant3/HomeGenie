@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,24 +6,53 @@ import {
   Switch,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  Button,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { getDatabase, ref, get, update, onValue } from "firebase/database";
+import {
+  getDatabase,
+  ref,
+  get,
+  update,
+  onValue,
+  remove,
+} from "firebase/database";
 import { database } from "../firebaseConfig"; // Import the database
 
 export default function Home() {
   const [devices, setDevices] = useState([]);
   const [emgStatus, setEmgStatus] = useState(false);
+  const [loading, setLoading] = useState(true); // Add loading state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [chooseData, setChooseData] = useState({});
   const navigation = useNavigation();
   const route = useRoute();
+  const prevNewItemRef = useRef();
+  const [pendingNewItem, setPendingNewItem] = useState(null);
 
   useEffect(() => {
-    if (route.params?.newItem) {
-      const newDevice = { type: route.params.newItem.type, isOn: false };
-      setDevices((prevDevices) => [...prevDevices, newDevice]);
+    const prevNewItem = prevNewItemRef.current;
+    if (route.params?.newItem && route.params?.newItem !== prevNewItem) {
+      setPendingNewItem(route.params.newItem);
+      prevNewItemRef.current = route.params?.newItem;
     }
   }, [route.params?.newItem]);
+
+  useEffect(() => {
+    if (pendingNewItem) {
+      const newDevice = { type: pendingNewItem.type, isOn: false };
+      setDevices((prevDevices) => [...prevDevices, newDevice]);
+      setPendingNewItem(null);
+    }
+  }, [pendingNewItem]);
 
   useEffect(() => {
     const deviceRef = ref(database, "device");
@@ -40,17 +69,19 @@ export default function Home() {
         } else {
           console.log("No data available for devices");
         }
+        setLoading(false); // Set loading to false after data is fetched
       },
       (error) => {
         console.error("Error fetching device data:", error);
+        setLoading(false); // Set loading to false in case of error
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [route.params?.refresh]);
 
   useEffect(() => {
-    const emgRef = ref(database, "EMG");
+    const emgRef = ref(database, "emgSensorData/value");
     const unsubscribe = onValue(
       emgRef,
       (snapshot) => {
@@ -68,6 +99,23 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (modalVisible) {
+      const chooseRef = ref(database, "Choose");
+      get(chooseRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            setChooseData(snapshot.val());
+          } else {
+            console.log("No data available for Choose");
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching Choose data:", error);
+        });
+    }
+  }, [modalVisible]);
+
   const toggleDevice = (index) => {
     setDevices((prevDevices) => {
       const updatedDevices = prevDevices.map((device, i) =>
@@ -76,43 +124,92 @@ export default function Home() {
 
       const updatedDevice = updatedDevices[index];
       const deviceRef = ref(database, `device/`);
-      update(deviceRef, { [updatedDevice.type]: updatedDevice.isOn ? 1 : 0 })
-        .then(() => {
-          console.log(`${updatedDevice.type} status updated successfully`);
-        })
-        .catch((error) => {
-          console.error(`Error updating ${updatedDevice.type} status:`, error);
-        });
+      update(deviceRef, { [updatedDevice.type]: updatedDevice.isOn ? 1 : 0 });
 
       return updatedDevices;
     });
   };
 
+  const confirmDeleteDevice = (index) => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this device?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteDevice(index),
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const deleteDevice = (index) => {
+    setDevices((prevDevices) => {
+      const updatedDevices = prevDevices.filter((_, i) => i !== index);
+      const deviceToDelete = prevDevices[index];
+
+      const db = getDatabase();
+      const deviceRef = ref(db, `device/${deviceToDelete.type}`);
+      const chooseRef = ref(db, `Choose/${deviceToDelete.type}`); // Also delete from Choose
+
+      remove(deviceRef).catch((error) => {
+        Alert.alert("Error removing device from database:", error);
+      });
+
+      remove(chooseRef).catch((error) => {
+        Alert.alert("Error removing device from Choose collection:", error);
+      });
+
+      return updatedDevices;
+    });
+  };
+
+  const toggleChooseItem = (key) => {
+    setChooseData((prevData) => ({
+      ...prevData,
+      [key]: prevData[key] === 1 ? 0 : 1,
+    }));
+  };
+
+  const handleSubmit = () => {
+    const chooseRef = ref(database, "Choose");
+    update(chooseRef, chooseData)
+      .then(() => {
+        Alert.alert("Success", "Choose data updated successfully");
+        setModalVisible(false);
+      })
+      .catch((error) => {
+        Alert.alert("Error updating Choose data:", error);
+      });
+  };
+
   const getIcon = (type) => {
-    switch (type) {
-      case "Light":
-      case "Second Light":
-        return <Ionicons name="bulb-outline" size={40} color="black" />;
-      case "Fan":
-        return (
-          <MaterialCommunityIcons
-            name="ceiling-fan-light"
-            size={40}
-            color="#2b2b2b"
-          />
-        );
-      case "Door":
-        return (
-          <MaterialCommunityIcons name="door-sliding" size={40} color="black" />
-        );
-      default:
-        return <Ionicons name="bulb-outline" size={40} color="black" />;
+    if (type.startsWith("Light")) {
+      return <Ionicons name="bulb-outline" style={styles.icon} />;
+    } else if (type.startsWith("Fan")) {
+      return (
+        <MaterialCommunityIcons
+          name="ceiling-fan-light"
+          size={70}
+          color="#2b2b2b"
+        />
+      );
+    } else if (type.startsWith("Door")) {
+      return <MaterialCommunityIcons name="door-sliding" style={styles.icon} />;
+    } else {
+      return <Ionicons name="bulb-outline" style={styles.icon} />;
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome jhone</Text>
+      <Text style={styles.title}>Welcome John</Text>
       <Text style={styles.subtitle}>Let's manage your smart home</Text>
       <TouchableOpacity
         style={styles.addIconContainer}
@@ -125,25 +222,65 @@ export default function Home() {
           style={styles.addIcon}
         />
       </TouchableOpacity>
-      <View style={styles.sensorContainer}>
+      <TouchableOpacity
+        style={styles.sensorContainer}
+        onPress={() => setModalVisible(true)}
+      >
         <Ionicons name="pulse-outline" size={24} color="black" />
         <Text style={styles.sensorText}>EGM Sensor Status</Text>
         <Text style={styles.sensorStatus}>{emgStatus ? "ON" : "OFF"}</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.deviceContainer}>
-          {devices.map((device, index) => (
-            <View key={index} style={styles.device}>
-              {getIcon(device.type)}
-              <Text style={styles.deviceText}>{device.type}</Text>
-              <Switch
-                value={device.isOn}
-                onValueChange={() => toggleDevice(index)}
-              />
-            </View>
-          ))}
+      </TouchableOpacity>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          <View style={styles.deviceContainer}>
+            {devices.map((device, index) => (
+              <View key={index} style={styles.device}>
+                <View style={styles.TopContainer}>
+                  {getIcon(device.type)}
+
+                  <TouchableOpacity onPress={() => confirmDeleteDevice(index)}>
+                    <MaterialIcons name="delete" size={24} color="red" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.typeContainer}>
+                  <Text style={styles.deviceText}>{device.type}</Text>
+                  <Switch
+                    value={device.isOn}
+                    onValueChange={() => toggleDevice(index)}
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Choose Data</Text>
+            <ScrollView>
+              {Object.keys(chooseData).map((key) => (
+                <View key={key} style={styles.chooseItem}>
+                  <Text>{key}</Text>
+                  <Switch
+                    value={chooseData[key] === 1}
+                    onValueChange={() => toggleChooseItem(key)}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            <Button title="Submit" onPress={handleSubmit} />
+            <Button title="Close" onPress={() => setModalVisible(false)} />
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
     </View>
   );
 }
@@ -191,7 +328,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+
+  TopContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
   deviceContainer: {
+    flex: 2,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
@@ -202,17 +346,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 10,
-    alignItems: "center",
+    alignItems: "left",
     marginBottom: 20,
     backgroundColor: "#f9f9f9",
+    position: "relative",
   },
-  deviceText: {
-    fontSize: 16,
-    marginVertical: 10,
-  },
+
   scrollViewContent: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    alignContent: "center",
+  },
+
+  typeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+
+  deviceText: {
+    fontSize: 24,
+    marginVertical: 10,
+  },
+  type: {
+    fontSize: 24,
+  },
+
+  icon: {
+    color: "#2b2b2b",
+    fontSize: 70,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  chooseItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
   },
 });

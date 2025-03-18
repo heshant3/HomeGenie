@@ -1,21 +1,23 @@
 import React from "react";
 import { StyleSheet, Text, View, Button } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function User() {
   const navigation = useNavigation();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     navigation.navigate("Login");
+    await AsyncStorage.clear();
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome jhone</Text>
+      <Text style={styles.title}>Welcome John</Text>
       <View style={styles.infoWrapper}>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>Jhone rock</Text>
+          <Text style={styles.value}>John Rock</Text>
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Email</Text>
