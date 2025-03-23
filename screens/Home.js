@@ -219,7 +219,7 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome John</Text>
+      <Text style={styles.title}>Welcome</Text>
       <Text style={styles.subtitle}>Let's manage your smart home</Text>
       <TouchableOpacity
         style={styles.addIconContainer}

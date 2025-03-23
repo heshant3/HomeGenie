@@ -21,7 +21,7 @@ export default function User() {
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>test@gmail.com</Text>
+          <Text style={styles.value}>test@t.com</Text>
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Password</Text>

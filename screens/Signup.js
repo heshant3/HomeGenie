@@ -9,16 +9,22 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { database } from "../firebaseConfig"; // Import your firebase configuration
-import { ref, get, child } from "firebase/database"; // Import get and child methods from firebase
+import { ref, set, push } from "firebase/database"; // Import push method from firebase
 
-export default function Login() {
+export default function Signup() {
   const navigation = useNavigation();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
-    if (!email || !password) {
+  const handleSignup = () => {
+    if (!name || !email || !password) {
       Alert.alert("Error", "All fields are required");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters long");
       return;
     }
 
@@ -28,31 +34,30 @@ export default function Login() {
       return;
     }
 
-    const dbRef = ref(database);
-    get(child(dbRef, `signup`))
-      .then((snapshot) => {
-        if (snapshot.exists()) {
-          const users = snapshot.val();
-          const user = Object.values(users).find(
-            (user) => user.email === email && user.password === password
-          );
-          if (user) {
-            navigation.navigate("HomeTabs");
-          } else {
-            Alert.alert("Error", "Invalid email or password");
-          }
-        } else {
-          Alert.alert("Error", "No users found");
-        }
+    const newUserRef = push(ref(database, "signup")); // Generate a new unique ID using push
+    // Save user data to Firebase Realtime Database
+    set(newUserRef, {
+      name: name,
+      email: email,
+      password: password,
+    })
+      .then(() => {
+        navigation.navigate("Login");
       })
       .catch((error) => {
-        console.error("Error fetching data: ", error);
+        console.error("Error adding document: ", error);
       });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.title}>Create Account</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        value={name}
+        onChangeText={setName}
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -67,11 +72,11 @@ export default function Login() {
         value={password}
         onChangeText={setPassword}
       />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={styles.button} onPress={handleSignup}>
+        <Text style={styles.buttonText}>Signup</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+        <Text style={styles.linkText}>Already have an account? Login</Text>
       </TouchableOpacity>
     </View>
   );
