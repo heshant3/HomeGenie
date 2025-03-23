@@ -181,7 +181,17 @@ export default function Home() {
     const chooseRef = ref(database, "Choose");
     update(chooseRef, chooseData)
       .then(() => {
-        Alert.alert("Success", "Choose data updated successfully");
+        const statusRef = ref(database, "Status");
+        update(statusRef, { Status: 1 }) // Add this line to update the Status field
+          .then(() => {
+            Alert.alert(
+              "Success",
+              "Choose data and Status updated successfully"
+            );
+          })
+          .catch((error) => {
+            Alert.alert("Error updating Status:", error);
+          });
         setModalVisible(false);
       })
       .catch((error) => {
@@ -226,7 +236,7 @@ export default function Home() {
         style={styles.sensorContainer}
         onPress={() => setModalVisible(true)}
       >
-        <Ionicons name="pulse-outline" size={24} color="black" />
+        <Ionicons name="pulse-outline" size={24} color="#a2a2a2" />
         <Text style={styles.sensorText}>EGM Sensor Status</Text>
         <Text style={styles.sensorStatus}>{emgStatus ? "ON" : "OFF"}</Text>
       </TouchableOpacity>
@@ -241,7 +251,7 @@ export default function Home() {
                   {getIcon(device.type)}
 
                   <TouchableOpacity onPress={() => confirmDeleteDevice(index)}>
-                    <MaterialIcons name="delete" size={24} color="red" />
+                    <MaterialIcons name="delete" size={24} color="#a3a3a3" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.typeContainer}>
@@ -276,8 +286,15 @@ export default function Home() {
                 </View>
               ))}
             </ScrollView>
-            <Button title="Submit" onPress={handleSubmit} />
-            <Button title="Close" onPress={() => setModalVisible(false)} />
+            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+              <Text style={{ color: "#fff" }}>Submit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={{ color: "#fff" }}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -399,5 +416,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
+  },
+
+  button: {
+    marginTop: 20,
+    backgroundColor: "#0e82ff",
+    color: "#fff",
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 10,
   },
 });
