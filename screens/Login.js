@@ -37,7 +37,7 @@ export default function Login() {
             (user) => user.email === email && user.password === password
           );
           if (user) {
-            navigation.navigate("HomeTabs");
+            navigation.navigate("SelectHome"); // Navigate to SelectHome page
           } else {
             Alert.alert("Error", "Invalid email or password");
           }

@@ -13,15 +13,15 @@ export default function User() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome John</Text>
+      <Text style={styles.title}>Welcome Tester</Text>
       <View style={styles.infoWrapper}>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>John Rock</Text>
+          <Text style={styles.value}>Tester</Text>
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>test@t.com</Text>
+          <Text style={styles.value}>test@test.com</Text>
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Password</Text>

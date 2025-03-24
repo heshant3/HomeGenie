@@ -9,6 +9,8 @@ import Signup from "./screens/Signup"; // Import the Signup screen
 import Home from "./screens/Home";
 import User from "./screens/User";
 import AddItem from "./screens/AddItem"; // Import the new screen
+import SelectVehicle from "./screens/SelectHome"; // Import the new screen
+import SelectHome from "./screens/SelectHome"; // Import SelectHome screen
 import { Octicons } from "@expo/vector-icons";
 
 const Stack = createStackNavigator();
@@ -65,6 +67,16 @@ export default function App() {
           <Stack.Screen
             name="AddItem"
             component={AddItem}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SelectVehicle"
+            component={SelectVehicle}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SelectHome"
+            component={SelectHome}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>
