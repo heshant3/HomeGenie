@@ -11,6 +11,7 @@ import User from "./screens/User";
 import AddItem from "./screens/AddItem"; // Import the new screen
 import SelectVehicle from "./screens/SelectHome"; // Import the new screen
 import SelectHome from "./screens/SelectHome"; // Import SelectHome screen
+import SplashScreen from "./screens/SplashScreen"; // Import the SplashScreen component
 import { Octicons } from "@expo/vector-icons";
 
 const Stack = createStackNavigator();
@@ -18,15 +19,30 @@ const Tab = createBottomTabNavigator();
 
 function HomeTabs() {
   return (
-    <Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === "Home") {
+            iconName = "home";
+          } else if (route.name === "User") {
+            iconName = "person";
+          }
+
+          // Change color for active button
+          color = focused ? "#1c1c1c" : color;
+
+          return <Octicons name={iconName} color={color} size={size} />;
+        },
+        tabBarActiveTintColor: "#1c1c1c", // Change active text color
+      })}
+    >
       <Tab.Screen
         name="Home"
         component={Home}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Octicons name="home" color={color} size={size} />
-          ),
         }}
       />
       <Tab.Screen
@@ -34,9 +50,6 @@ function HomeTabs() {
         component={User}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Octicons name="person" color={color} size={size} />
-          ),
         }}
       />
     </Tab.Navigator>
@@ -77,6 +90,11 @@ export default function App() {
           <Stack.Screen
             name="SelectHome"
             component={SelectHome}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SplashScreen"
+            component={SplashScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

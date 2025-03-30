@@ -59,9 +59,15 @@ export default function AddItem() {
         <Picker.Item label="Fan" value="Fan" />
       </Picker>
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#1c1c1c" />
       ) : (
-        <Button title="Add Item" onPress={handleAddItem} disabled={loading} />
+        <Button
+          style={styles.button}
+          title="Add Item"
+          onPress={handleAddItem}
+          disabled={loading}
+          color="#1c1c1c"
+        />
       )}
     </View>
   );
